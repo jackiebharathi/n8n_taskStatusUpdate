@@ -1,0 +1,703 @@
+{
+  "name": "TaskStatusUpdate",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "triggerAtHour": 20
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -352
+      ],
+      "id": "a2d69e33-a6bc-457d-9190-66ed978afedc",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  { json: { channel: \"D09QC0Q87HC\" } },\n  { json: { channel:\"D09PS0J1LGZ\"}},\n  {json:{channel:\"D09QZU07AHF\"}},\n  {json:{channel:\"D09QSUPBT7T\"}},\n  {json:{channel:\"D09QHH042BF\"}}\n  \n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -352
+      ],
+      "id": "a261a495-312d-4462-9c30-45e36008ac3d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/conversations.history",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"channel\": \"{{ $json.channel }}\",\n  \"limit\": 2\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        448,
+        -352
+      ],
+      "id": "ecf621e9-46b6-4886-b89f-11a668455548",
+      "name": "HTTP Request",
+      "credentials": {
+        "slackApi": {
+          "id": "NhhbINpSp2OeAs8C",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process all items and extract the last 2 messages\nconst results = [];\n\nfor (const item of $input.all()) {\n  // Skip failed requests\n  if (!item.json.ok) {\n    continue;\n  }\n  \n  const messages = item.json.messages || [];\n  \n  // Get the last 2 messages (they're already sorted newest first)\n  const message1 = messages[0]?.text || 'No message';\n  const message2 = messages[1]?.text || 'No message';\n  \n  results.push({\n    json: {\n      user: messages[0]?.user || 'Unknown',\n      message1: message1,\n      message2: message2,\n      timestamp: new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        -352
+      ],
+      "id": "ef33e051-e65a-468f-a5bd-c86343773e39",
+      "name": "Code in JavaScript1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "resource": "user",
+        "user": {
+          "__rl": true,
+          "value": "={{ $json.user }}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        -416
+      ],
+      "id": "bcf075a5-1517-49f7-9180-ea0ff68562ce",
+      "name": "Get information about a user",
+      "webhookId": "58d0d789-5715-4899-89be-a068bc86dbf3",
+      "credentials": {
+        "slackApi": {
+          "id": "NhhbINpSp2OeAs8C",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "id",
+              "field2": "user"
+            }
+          ]
+        },
+        "joinMode": "enrichInput2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1120,
+        -352
+      ],
+      "id": "8ab61bbf-4481-4a68-aca4-7c6eecd0a074",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all items from the merge node\nconst items = $input.all();\n\n// Get today's date in MM/DD/YYYY format\nconst today = new Date();\nconst formattedDate = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;\n\n// Transform each item to match Google Sheets columns\nreturn items.map(item => {\n  return {\n    json: {\n      Date: formattedDate,\n      Name: item.json.real_name || 'Unknown',\n      'Planned Task': item.json.message2 || '',\n      'Task Status': item.json.message1 || ''\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -352
+      ],
+      "id": "6619b59a-c678-4246-9671-03bbdce3f574",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "operation": "clear",
+        "documentId": {
+          "__rl": true,
+          "value": "1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs",
+          "mode": "list",
+          "cachedResultName": "Feedback_Responses",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs/edit#gid=0"
+        },
+        "clear": "specificRange",
+        "range": "A2:D999"
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1568,
+        -352
+      ],
+      "id": "41940796-9af2-436d-b0a5-2f47ea6cee84",
+      "name": "Clear sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lTPKdQ5H2NDhd8H5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs",
+          "mode": "list",
+          "cachedResultName": "Feedback_Responses",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "Date"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Planned Task",
+              "displayName": "Planned Task",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Task Status",
+              "displayName": "Task Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        -352
+      ],
+      "id": "f44f6be8-52e2-4f96-b8c5-de65f2c508b0",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lTPKdQ5H2NDhd8H5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs",
+          "mode": "list",
+          "cachedResultName": "Feedback_Responses",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1v_H2X8WiIWMW8lTYVvbfeebGmdC_NddRAF9B42UqzJs/edit#gid=0"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "A1:D6"
+            }
+          },
+          "returnFirstMatch": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        -352
+      ],
+      "id": "7f556397-dfb1-40df-82c4-4929d3527ca4",
+      "name": "Get row(s) in sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "lTPKdQ5H2NDhd8H5",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all rows from Google Sheets\nconst items = $input.all();\n\n// Filter out FeedbackBot and header row if needed\nconst dataRows = items.filter(item => {\n  const name = item.json.Name || '';\n  return name !== 'FeedbackBot' && name !== 'Name'; // Exclude bot and header\n});\n\n// Get date from first data row\nconst date = dataRows[0]?.json.Date || new Date().toLocaleDateString('en-US');\n\n// Build HTML\nlet html = `\n<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<style>\n  * {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n  }\n  body {\n    font-family: 'Segoe UI', Roboto, Arial, sans-serif;\n    padding: 30px;\n    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\n    min-height: 100vh;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n  }\n  .container {\n    background: white;\n    border-radius: 12px;\n    overflow: hidden;\n    box-shadow: 0 20px 60px rgba(0,0,0,0.3);\n    max-width: 1400px;\n    width: 100%;\n  }\n  .date-header {\n    background: linear-gradient(135deg, #2c5f2d 0%, #4a7c59 100%);\n    color: white;\n    padding: 25px;\n    text-align: center;\n    font-size: 28px;\n    font-weight: bold;\n  }\n  table {\n    border-collapse: collapse;\n    width: 100%;\n  }\n  th {\n    background: #2c5f2d;\n    color: white;\n    padding: 18px 20px;\n    text-align: left;\n    font-weight: 600;\n    font-size: 16px;\n  }\n  td {\n    padding: 20px;\n    border-bottom: 1px solid #e8e8e8;\n    vertical-align: top;\n    font-size: 14px;\n    line-height: 1.8;\n  }\n  tr:nth-child(even) {\n    background-color: #f9fafb;\n  }\n  .name-col {\n    font-weight: 700;\n    color: #2c5f2d;\n    font-size: 16px;\n  }\n</style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"date-header\">📋 Daily Task Status - ${date}</div>\n    <table>\n      <thead>\n        <tr>\n          <th style=\"width: 20%;\">Name</th>\n          <th style=\"width: 40%;\">Planned Task</th>\n          <th style=\"width: 40%;\">Task Status</th>\n        </tr>\n      </thead>\n      <tbody>\n`;\n\n// Add data rows\ndataRows.forEach(item => {\n  const name = item.json.Name || '';\n  const plannedTask = (item.json['Planned Task'] || '').replace(/\\n/g, '<br>');\n  const taskStatus = (item.json['Task Status'] || '').replace(/\\n/g, '<br>');\n  \n  html += `\n    <tr>\n      <td class=\"name-col\">${name}</td>\n      <td>${plannedTask}</td>\n      <td>${taskStatus}</td>\n    </tr>\n  `;\n});\n\nhtml += `\n      </tbody>\n    </table>\n  </div>\n</body>\n</html>\n`;\n\nreturn [{\n  json: {\n    html: html\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        -352
+      ],
+      "id": "1a0b50aa-5c50-413c-af30-e9cd324c072c",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hcti.io/v1/image",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "html",
+              "value": "={{ $json.html }}"
+            },
+            {
+              "name": "css"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2464,
+        -352
+      ],
+      "id": "9f5cb126-945c-4d56-999a-2003194576ca",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "nUoVAHs3NLqhASMM",
+          "name": "Unnamed credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "940260100",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "📊 Daily Task Status Report",
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2912,
+        -352
+      ],
+      "id": "cb7ab15d-34d6-40f6-911c-c654df744c36",
+      "name": "Send a photo message",
+      "webhookId": "48d5433c-ec70-434e-86ea-5afb389a739d",
+      "credentials": {
+        "telegramApi": {
+          "id": "7BQzl34mjF0k3jVi",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2688,
+        -352
+      ],
+      "id": "87da7d45-75ee-4126-a8d4-61a1a285f922",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "open",
+        "options": {
+          "users": "={{ [$json.user] }}"
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        -640
+      ],
+      "id": "74bf16d9-de7e-413e-9113-ee65b233a5b8",
+      "name": "Open a channel",
+      "webhookId": "e2cb2381-25eb-4db1-876a-4e207c324c68",
+      "credentials": {
+        "slackApi": {
+          "id": "NhhbINpSp2OeAs8C",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{$json[\"id\"]}}",
+          "mode": "id"
+        },
+        "text": "👋 Hi! Please update your daily task status before 8:00 PM.  After this message, please send **two separate messages**: 1️⃣ Your *Planned Task*   2️⃣ Your *Task Status Update*",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -640
+      ],
+      "id": "b9dc1566-7026-43cc-a88c-02cc02c33491",
+      "name": "Send a message",
+      "webhookId": "8d42343c-ba31-458c-9cea-892a4aa62d41",
+      "credentials": {
+        "slackApi": {
+          "id": "NhhbINpSp2OeAs8C",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1,
+                2,
+                3,
+                4,
+                5
+              ],
+              "triggerAtHour": 18,
+              "triggerAtMinute": 30
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -640
+      ],
+      "id": "3097ec67-d5f3-4d11-9fc4-4d36049267f2",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define Slack users with their names and IDs\nconst users = [\n  { json: { name: 'Jayabharathi', user: 'U09D6ACFEP7' } },\n  { json: { name: 'Kabilan', user: 'U09FDAD8RJ8' } },\n  { json: { name: 'Sai', user: 'U09K7RQLAS0' } },\n  { json: { name: 'Praveen', user: 'U03NWMPD63U' } },\n  { json: { name: 'Ragul', user: 'U09LFA980UQ' } }\n];\n\n// Output each user separately so next nodes run once per user\nreturn users;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        -640
+      ],
+      "id": "c1c49ad1-3448-4ce0-ab9e-d6974bcf9963",
+      "name": "Code in JavaScript4"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Get information about a user",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get information about a user": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Clear sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clear sheet": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a photo message": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open a channel": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Open a channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Kolkata",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "8f77530f-c30d-45ac-9766-fa54eb707d09",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "da07f20d8b71a6d213055606a0d10ee2031b707de837894ea31556497ca2118e"
+  },
+  "id": "I3o8MXGCrzHOxyPm",
+  "tags": []
+}
